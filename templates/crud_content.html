@@ -1,0 +1,55 @@
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th></th>
+                {% for col in columns %}
+                    <th>
+                        <button
+                            class="{% if sorted_column == col %}sorted{% endif %}"
+                            hx-get="/crud_table?selected_table={{ selected_table }}&sort={{ col }}&sort_dir={{ sort_dir }}"
+                            hx-target="#crud-content" hx-swap="innerHTML">
+                            {{ col }}
+                            {% if sorted_column == col %}
+                                {% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}
+                            {% endif %}
+                        </button>
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr data-row-id="{{ row[columns[0]] }}"
+                {% if selected_row_id == row[columns[0]] %}class="selected"{% endif %}>
+                <td>
+                    <input type="radio" name="selected_row" value="{{ row[columns[0]] }}"
+                        onclick="setSelectedRow({{ row[columns[0]] }})"
+                        {% if selected_row_id == row[columns[0]] %}checked{% endif %}>
+                </td>
+                {% for col in columns %}
+                    <td>
+                        {% if data_types[col] == 'boolean' %}
+                            <input type="checkbox" disabled {% if row[col] %}checked{% endif %}>
+                        {% else %}
+                            {{ row[col] }}
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        {% if page > 1 %}
+          <button hx-get="/crud_table?selected_table={{ selected_table }}&page={{ page-1 }}&per_page={{ per_page }}&sort={{ sorted_column }}&sort_dir={{ sort_dir }}"
+                  hx-target="#crud-content" hx-swap="innerHTML">Previous</button>
+        {% endif %}
+        Page {{ page }} of {{ total_pages }}
+        {% if page < total_pages %}
+          <button hx-get="/crud_table?selected_table={{ selected_table }}&page={{ page+1 }}&per_page={{ per_page }}&sort={{ sorted_column }}&sort_dir={{ sort_dir }}"
+                  hx-target="#crud-content" hx-swap="innerHTML">Next</button>
+        {% endif %}
+    </div>
+</div>

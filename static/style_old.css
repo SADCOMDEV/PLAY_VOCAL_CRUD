@@ -1,0 +1,210 @@
+/* ==========================
+   GLOBAL
+========================= */
+body {
+    background-color: #1e1e1e;
+    color: #cfcfcf;
+    font-family: "Fira Code", monospace;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background-color: #2a2a2a;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+/* ==========================
+   HEADER BAR
+========================= */
+.header-bar {
+    background-color: #1f6feb;
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-radius: 6px;
+}
+
+.header-bar h1 {
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.table-name {
+    color: #1f6feb;
+    margin-bottom: 6px;
+}
+
+/* ==========================
+   TABLE WRAPPER
+========================= */
+.table-wrapper {
+    overflow-x: auto;
+    max-height: 70vh;
+    margin-top: 15px;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 5px;
+}
+
+/* ==========================
+   TABLE STYLES
+========================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: auto;
+}
+
+th,
+td {
+    padding: 8px 12px;
+    border: 1px solid #555;
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* ==========================
+   TABLE HEADER BUTTONS (CRUD)
+========================= */
+#crud-container table thead th button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background-color: rgb(7, 179, 247); 
+    color: #1f6feb; /* blue text */
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+
+    /* REMOVE green focus flash */
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#crud-container table thead th button:hover {
+    background-color: rgba(64, 224, 208, 0.25);
+}
+
+#crud-container table thead th button:focus,
+#crud-container table thead th button:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* optional subtle focus for accessibility */
+#crud-container table thead th button:focus-visible {
+    outline: 2px solid rgba(64, 224, 208, 0.5);
+    outline-offset: 2px;
+}
+
+/* ==========================
+   TABLE ROWS
+========================= */
+#crud-container table tr:nth-child(even) {
+    background-color: #2a2a2a;
+}
+
+#crud-container table tr:nth-child(odd) {
+    background-color: #3a3a3a;
+}
+
+#crud-container table tr.selected {
+    background-color: rgba(255, 204, 0, 0.918);
+}
+
+/* ==========================
+   GENERAL BUTTONS
+========================= */
+button:not(th > button) {
+    background-color: #4af;
+    color: black;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+}
+
+button:not(th > button):hover {
+    background-color: #6cf;
+}
+
+button.danger {
+    background-color: #e63946;
+    color: white;
+}
+
+button.danger:hover {
+    background-color: #ff4d5a;
+}
+
+/* ==========================
+   INPUTS
+========================= */
+input {
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #555;
+    background-color: #1e1e1e;
+    color: #cfcfcf;
+    margin: 2px 0;
+}
+
+input.required {
+    background-color: rgba(31, 111, 235, 0.15);
+    border-left: 4px solid #1f6feb;
+}
+
+input[type="radio"] {
+    transform: scale(1.3);
+}
+
+/* ==========================
+   PAGINATION
+========================= */
+.pagination button {
+    background-color: #1f6feb;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 3px;
+}
+
+.pagination button:hover {
+    background-color: #3ea1ff;
+}
+
+/* ==========================
+   TOOLBARS
+========================= */
+.toolbar,
+.edit-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+}
+
+/* ==========================
+   SCROLLBAR
+========================= */
+.table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 4px;
+}

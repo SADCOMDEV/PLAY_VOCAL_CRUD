@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="toolbar">
+    <span style="color:#4af; font-family: Arial, Helvetica, sans-serif;"><strong>Current Table:</strong></span>
+    <select id="table-select" name="selected_table"
+        onchange="onTableChange(this)">
+        {% for t in tables %}
+            <option value="{{ t }}" {% if t == selected_table %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+    </select>
+
+    <!-- Add button triggers insert/edit form -->
+    <button id="add-btn" type="button"
+        onclick="addRow()">
+        Add
+    </button>
+
+    <button id="edit-btn" type="button" onclick="editSelected()">Edit</button>
+    <button id="delete-btn" type="button" onclick="deleteSelected()">Delete</button>
+</div>
+
+<!-- ---------------------------
+     Table container
+--------------------------- -->
+<div id="crud-container" class="table-wrapper">
+    <div id="crud-content"
+         hx-get="/crud_table?selected_table={{ selected_table }}&sort={{ sorted_column|default('') }}&sort_dir={{ sort_dir|default('asc') }}"
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="innerHTML">
+        Loading table…
+    </div>
+</div>
+
+<!-- ---------------------------
+     Pagination buttons
+--------------------------- -->
+<div id="crud-pagination" style="margin-top:15px; text-align:center;">
+    {% if page > 1 %}
+        <button 
+            hx-get="/crud_table?selected_table={{ selected_table }}&page={{ page - 1 }}&sort={{ sorted_column|default('') }}&sort_dir={{ sort_dir|default('asc') }}"
+            hx-target="#crud-content"
+            hx-swap="innerHTML">
+            Prev
+        </button>
+    {% endif %}
+
+    <span>Page {{ page }} of {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+        <button 
+            hx-get="/crud_table?selected_table={{ selected_table }}&page={{ page + 1 }}&sort={{ sorted_column|default('') }}&sort_dir={{ sort_dir|default('asc') }}"
+            hx-target="#crud-content"
+            hx-swap="innerHTML">
+            Next
+        </button>
+    {% endif %}
+</div>
+
+<!-- ---------------------------
+     Error popup (hidden by default)
+--------------------------- -->
+<div id="crud-error-popup" style="
+        display:none;
+        position:fixed;
+        top:50%;
+        left:50%;
+        transform:translate(-50%, -50%);
+        background:#f44336;
+        color:white;
+        padding:30px 40px;
+        font-size:18px;
+        font-weight:bold;
+        border-radius:8px;
+        z-index:10000;
+        max-width:80%;
+        text-align:center;
+">
+    <div style="font-size:24px; font-weight:bold; margin-bottom:15px;">Database Error</div>
+    <span id="crud-error-text"></span>
+    <button onclick="document.getElementById('crud-error-popup').style.display='none';"
+            style="
+                display:block;
+                margin:20px auto 0;
+                background:white;
+                color:#f44336;
+                border:none;
+                padding:10px 20px;
+                cursor:pointer;
+                font-weight:bold;
+                border-radius:4px;
+            ">
+        Close
+    </button>
+</div>
+
+{% endblock %}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PlayVocal Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        .top-tab-bar {
+            display: flex;
+            background: #222;
+            padding: 0 10px;
+            height: 40px;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .top-tab-bar button {
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .top-tab-bar button.active,
+        .top-tab-bar button:hover {
+            background: #1f6feb;
+            border-radius: 4px;
+        }
+
+        .content-wrapper {
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container" style="padding-top: 21px;">
+
+  <div style="display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 22px;">
+      <!-- Horizontal line/logo on the left -->
+      <img src="/static/playvocal-logo.png" alt="Logo" 
+           style="height: 80px; width: auto; position: absolute; left: 0;">
+      <!-- Centered text -->
+      <h1 style="color: rgb(19,159,212); margin: 0; ">PlayVocal Admin</h1>
+  </div>
+
+
+    <!-- TOP TABS -->
+    <div class="top-tab-bar">
+
+        <button class="menu-tab"
+                data-tab="multiple_choice"
+                hx-get="/menu/multiple_choice"
+                hx-target="#menu-content"
+                hx-swap="innerHTML">
+            Multiple Choice
+        </button>
+
+        <button class="menu-tab"
+                data-tab="story"
+                hx-get="/menu/story"
+                hx-target="#menu-content"
+                hx-swap="innerHTML">
+            Story
+        </button>
+
+        <button class="menu-tab active"
+                data-tab="crud"
+                hx-get="/menu/crud"
+                hx-target="#menu-content"
+                hx-swap="innerHTML">
+            Admin
+        </button>
+        
+    </div>
+
+    <!-- CONTENT AREA -->
+    <div class="content-wrapper">
+        <div id="menu-content"
+             hx-get="/menu/crud"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/htmx.min.js"></script>
+<script src="/static/crud.js"></script>
+
+<script>
+document.body.addEventListener("htmx:afterRequest", function (evt) {
+    const btn = evt.target.closest(".menu-tab");
+    if (!btn) return;
+
+    document.querySelectorAll(".menu-tab").forEach(b =>
+        b.classList.remove("active")
+    );
+
+    btn.classList.add("active");
+});
+</script>
+
+</body>
+</html>

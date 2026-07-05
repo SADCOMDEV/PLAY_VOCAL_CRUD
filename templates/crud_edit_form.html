@@ -1,0 +1,101 @@
+<!-- templates/crud_edit_form.html -->
+<div class="edit-wrapper"
+     data-table="{{ selected_table }}"
+     data-insert="{{ 'true' if insert_mode else 'false' }}"
+     {% if not insert_mode %}
+         data-row-id="{{ row[columns[0]] }}"
+     {% endif %}>
+
+    <!-- Save / Cancel toolbar (moved above table) -->
+    <div class="edit-toolbar">
+        <button type="button"
+                class="save-btn"
+                onclick="saveEdit({{ 'true' if insert_mode else 'false' }})">
+            Save
+        </button>
+        <button type="button"
+                class="cancel-btn"
+                onclick="cancelEdit()">
+            Cancel
+        </button>
+    </div>
+
+    <table class="edit-table">
+        <thead>
+            <tr>
+                {% for col in columns %}
+                    <th>
+                        <button type="button" class="header-btn">
+                            {{ col }}
+                            {% if col in required_columns %}
+                                <span style="color:#f44336">*</span>
+                            {% endif %}
+                        </button>
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                {% for col in columns %}
+                    <td>
+                        {% set is_required = col in required_columns %}
+                        {% set is_locked = locked_columns.get(col, false) %}
+                        {% set max_len = column_lengths.get(col) %}
+
+                        {% if data_types[col] == 'boolean' %}
+                            <input type="checkbox"
+                                   name="{{ col }}"
+                                   {% if row and row[col] %}checked{% endif %}
+                                   {% if is_required %}required{% endif %}
+                                   {% if is_locked %}disabled{% endif %}>
+
+                        {% elif data_types[col] in [
+                            'timestamp without time zone',
+                            'timestamp with time zone',
+                            'date'
+                        ] %}
+                            <input type="datetime-local"
+                                   name="{{ col }}"
+                                   value="{% if row and row[col] %}{{ row[col]|replace(' ', 'T') }}{% endif %}"
+                                   {% if is_required %}required{% endif %}
+                                   {% if is_locked %}disabled{% endif %}>
+
+                        {% else %}
+                            <input type="text"
+                                   name="{{ col }}"
+                                   value="{{ row[col] if row and row[col] is not none else '' }}"
+                                   {% if max_len %}maxlength="{{ max_len }}"{% endif %}
+                                   {% if is_required %}required style="border:1px solid #f44336"{% endif %}
+                                   {% if is_locked %}disabled style="background:#eee"{% endif %}>
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Error popup -->
+<div id="crud-error-popup"
+     style="display:none; position:fixed; top:50%; left:50%;
+            transform:translate(-50%, -50%);
+            background:#f44336; color:white;
+            padding:30px 40px; font-size:18px;
+            font-weight:bold; border-radius:8px;
+            z-index:10000; max-width:80%;
+            text-align:center;">
+    <div style="font-size:24px; margin-bottom:15px;">
+        Database Error
+    </div>
+    <span id="crud-error-text"></span>
+    <button onclick="this.parentElement.style.display='none'"
+            style="display:block; margin:20px auto 0;
+                   background:white; color:#f44336;
+                   border:none; padding:10px 20px;
+                   cursor:pointer; font-weight:bold;
+                   border-radius:4px;">
+        Close
+    </button>
+</div>
