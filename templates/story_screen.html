@@ -1,0 +1,177 @@
+<div id="story-screen">
+    <div class="toolbar">
+        <span style="color:#4af;"><strong>Story App:</strong></span>
+        <select onchange="selectApp(this, '/story/select')">
+            {% for a in apps %}
+                <option value="{{ a.id }}" {% if a.id == selected_app_id %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" onclick="toggleNewAppForm('new-story-app-form')">+ New App</button>
+    </div>
+
+    <form id="new-story-app-form" class="hidden new-app-form"
+          hx-post="/app/create" hx-target="#story-screen" hx-swap="outerHTML">
+        <input type="hidden" name="type" value="STORY">
+        <input type="text" name="name" placeholder="App name" required>
+        <input type="text" name="default_greeting" placeholder="Greeting (optional)">
+        <input type="text" name="description" placeholder="Description (optional)">
+        <button type="submit">Create</button>
+    </form>
+
+    {% if not apps %}
+        <p>No STORY apps yet. Click "+ New App" to create one.</p>
+
+    {% elif selected_scene %}
+        <!-- ============ DETAIL VIEW: one scene + its own options ============ -->
+        <button type="button" class="back-link"
+                hx-get="/story/select?app_id={{ selected_app_id }}"
+                hx-target="#story-screen" hx-swap="outerHTML">
+            &larr; Back to scene tree
+        </button>
+
+        <div class="content-block">
+            {% if selected_scene.prompt_key %}
+                <span class="scene-choice-label">Offered by its parent as: "{{ selected_scene.prompt_key }}"</span>
+            {% endif %}
+
+            <label style="display:block; margin-bottom:6px;">Narration (spoken once the caller is in this scene):</label>
+            <form hx-post="/story/node/edit" hx-target="#story-screen" hx-swap="outerHTML" style="display:flex; gap:6px; flex-wrap:wrap;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="node_id" value="{{ selected_scene.id }}">
+                <input type="hidden" name="parent_node_id" value="{{ selected_scene.parent_node_id or 0 }}">
+                <input type="hidden" name="prompt_key" value="{{ selected_scene.prompt_key or '' }}">
+                <input type="text" name="prompt_text" value="{{ selected_scene.prompt_text or '' }}"
+                       placeholder="e.g. You stand before the mouth of a dark cave..." style="flex:2; min-width:300px;">
+                <input type="text" id="scene-audio-{{ selected_scene.id }}" name="audio_file_url" value="{{ selected_scene.audio_file_url or '' }}"
+                       placeholder="Recorded narration URL (optional -- overrides text-to-speech)" style="flex:2; min-width:250px;">
+                <button type="button" onclick="openAudioPicker('scene-audio-{{ selected_scene.id }}')">Browse...</button>
+                <button type="submit">Save</button>
+            </form>
+            {% if selected_scene.audio_file_url %}
+                <p style="opacity:0.7; margin-top:4px;">A recorded clip is set for this scene -- the options list below is still spoken by text-to-speech, since it can change independently of the recording.</p>
+            {% endif %}
+
+            <details style="margin-top:10px;">
+                <summary style="cursor:pointer; opacity:0.8;">Advanced: move this scene under a different parent</summary>
+                <form hx-post="/story/node/edit" hx-target="#story-screen" hx-swap="outerHTML" style="display:flex; gap:6px; margin-top:6px;">
+                    <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                    <input type="hidden" name="node_id" value="{{ selected_scene.id }}">
+                    <input type="hidden" name="prompt_key" value="{{ selected_scene.prompt_key or '' }}">
+                    <input type="hidden" name="prompt_text" value="{{ selected_scene.prompt_text or '' }}">
+                    <input type="hidden" name="audio_file_url" value="{{ selected_scene.audio_file_url or '' }}">
+                    <select name="parent_node_id">
+                        <option value="0" {% if not selected_scene.parent_node_id %}selected{% endif %}>(root scene)</option>
+                        {% for p in scenes %}
+                            {% if p.id != selected_scene.id %}
+                            <option value="{{ p.id }}" {% if p.id == selected_scene.parent_node_id %}selected{% endif %}>{{ p.prompt_text[:40] if p.prompt_text else (p.prompt_key or p.node_key) }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Move</button>
+                </form>
+            </details>
+
+            <form hx-post="/story/node/delete" hx-target="#story-screen" hx-swap="outerHTML"
+                  hx-confirm="Delete this scene? Its own options will be reattached to its parent."
+                  style="margin-top:10px;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="node_id" value="{{ selected_scene.id }}">
+                <button type="submit" class="danger">Delete This Scene</button>
+            </form>
+
+            <h4 style="margin-top:18px;">Options from here (what the caller can say next)</h4>
+            <table class="answer-table">
+                <thead><tr><th>Say</th><th>Option</th><th></th><th></th></tr></thead>
+                <tbody>
+                {% for opt in selected_scene.children %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <input type="text" name="prompt_key" value="{{ opt.prompt_key or '' }}"
+                                   placeholder="e.g. 'grab the sword and run in'"
+                                   hx-post="/story/node/edit"
+                                   hx-target="#story-screen"
+                                   hx-swap="outerHTML"
+                                   hx-trigger="change"
+                                   hx-include="closest tr"
+                                   style="width:95%;">
+                            <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                            <input type="hidden" name="node_id" value="{{ opt.id }}">
+                            <input type="hidden" name="parent_node_id" value="{{ selected_scene.id }}">
+                            <input type="hidden" name="prompt_text" value="{{ opt.prompt_text or '' }}">
+                            <input type="hidden" name="audio_file_url" value="{{ opt.audio_file_url or '' }}">
+                        </td>
+                        <td>
+                            <button type="button"
+                                    hx-get="/story/view?app_id={{ selected_app_id }}&scene_id={{ opt.id }}"
+                                    hx-target="#story-screen" hx-swap="outerHTML">
+                                Open scene &rarr;
+                            </button>
+                        </td>
+                        <td>
+                            <button type="button" class="danger"
+                                    hx-post="/story/node/delete"
+                                    hx-target="#story-screen" hx-swap="outerHTML"
+                                    hx-vals='{"app_id": "{{ selected_app_id }}", "node_id": "{{ opt.id }}"}'
+                                    hx-confirm="Delete this option? Its own options will be reattached to this scene.">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="4" style="opacity:0.7;">No options yet -- this is currently an ending. Add one below.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <form hx-post="/story/node/add" hx-target="#story-screen" hx-swap="outerHTML" style="display:flex; gap:6px; margin-top:6px;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="parent_node_id" value="{{ selected_scene.id }}">
+                <input type="text" name="prompt_key" placeholder="New option, e.g. 'run back home'" required style="flex:2;">
+                <button type="submit">+ Add Option</button>
+            </form>
+        </div>
+
+    {% else %}
+        <!-- ============ LIST VIEW: collapsible scene tree ============ -->
+        {% if not scene_tree %}
+            <form hx-post="/story/node/add" hx-target="#story-screen" hx-swap="outerHTML" style="display:flex; gap:6px;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="parent_node_id" value="0">
+                <input type="text" name="prompt_text" placeholder="Opening scene, e.g. You stand before a dark cave..." required style="flex:2;">
+                <button type="submit">+ Add Opening Scene</button>
+            </form>
+        {% else %}
+            {% macro render_scene(s) %}
+                <li class="tree-node">
+                    <div class="tree-row">
+                        {% if s.children %}
+                            <button type="button" class="tree-toggle" onclick="toggleTreeNode(this)">&minus;</button>
+                        {% else %}
+                            <span class="tree-toggle-spacer"></span>
+                        {% endif %}
+                        <span class="tree-label">
+                            {% if s.prompt_key %}<em>"{{ s.prompt_key }}"</em> &mdash;{% endif %}
+                            {{ (s.prompt_text[:60] + '...') if s.prompt_text and s.prompt_text|length > 60 else (s.prompt_text or '(no narration yet)') }}
+                            {% if s.audio_file_url %}<em>(recorded)</em>{% endif %}
+                        </span>
+                        <button type="button"
+                                hx-get="/story/view?app_id={{ selected_app_id }}&scene_id={{ s.id }}"
+                                hx-target="#story-screen" hx-swap="outerHTML">
+                            Open
+                        </button>
+                    </div>
+                    {% if s.children %}
+                        <ul class="tree-children">
+                            {% for c in s.children %}{{ render_scene(c) }}{% endfor %}
+                        </ul>
+                    {% endif %}
+                </li>
+            {% endmacro %}
+
+            <ul class="tree-root">
+                {% for s in scene_tree %}{{ render_scene(s) }}{% endfor %}
+            </ul>
+        {% endif %}
+    {% endif %}
+</div>

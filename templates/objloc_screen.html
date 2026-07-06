@@ -1,0 +1,158 @@
+<div id="objloc-screen">
+    <div class="toolbar">
+        <span style="color:#4af;"><strong>World App:</strong></span>
+        <select onchange="selectApp(this, '/objloc/select')">
+            {% for a in apps %}
+                <option value="{{ a.id }}" {% if a.id == selected_app_id %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" onclick="toggleNewAppForm('new-objloc-app-form')">+ New App</button>
+    </div>
+
+    <form id="new-objloc-app-form" class="hidden new-app-form"
+          hx-post="/app/create" hx-target="#objloc-screen" hx-swap="outerHTML">
+        <input type="hidden" name="type" value="OBJLOC">
+        <input type="text" name="name" placeholder="App name" required>
+        <input type="text" name="default_greeting" placeholder="Greeting (optional)">
+        <input type="text" name="description" placeholder="Description (optional)">
+        <button type="submit">Create</button>
+    </form>
+
+    {% if not apps %}
+        <p>No World (OBJLOC) apps yet. Click "+ New App" to create one.</p>
+    {% else %}
+    <div style="display:flex; gap:24px; align-items:flex-start;">
+        <div class="room-list" style="flex:1; min-width:200px;">
+            <h3>Rooms</h3>
+            <form hx-post="/objloc/room/add" hx-target="#objloc-screen" hx-swap="outerHTML" style="display:flex; flex-direction:column; gap:4px;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="text" name="prompt_text" placeholder="Room description (spoken)" required>
+                <div style="display:flex; gap:4px;">
+                    <input type="text" id="new-room-audio-url" name="audio_file_url" placeholder="Recorded description URL (optional)" style="flex:1;">
+                    <button type="button" onclick="openAudioPicker('new-room-audio-url')">Browse...</button>
+                </div>
+                <input type="text" name="description" placeholder="Author notes (optional)">
+                <button type="submit">Add Room</button>
+            </form>
+            <ul class="room-nav">
+            {% for r in rooms %}
+                <li>
+                    <button type="button"
+                            class="room-nav-btn {{ 'active' if r.id == selected_room_id else '' }}"
+                            onclick="selectRoom({{ selected_app_id }}, {{ r.id }})">
+                        {{ r.node_key }}{% if r.audio_file_url %} &#9834;{% endif %}
+                    </button>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+
+        {% if selected_room_id %}
+        {% set room = rooms | selectattr('id', 'equalto', selected_room_id) | first %}
+        <div class="room-detail" style="flex:2;">
+            <h3>Room: {{ room.node_key }}</h3>
+            <form hx-post="/objloc/room/edit" hx-target="#objloc-screen" hx-swap="outerHTML" style="display:flex; gap:6px; flex-wrap:wrap;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="room_id" value="{{ room.id }}">
+                <input type="text" name="prompt_text" value="{{ room.prompt_text or '' }}" required style="flex:2;">
+                <input type="text" id="room-audio-{{ room.id }}" name="audio_file_url" value="{{ room.audio_file_url or '' }}"
+                       placeholder="Recorded description URL (optional -- overrides text-to-speech)" style="flex:2;">
+                <button type="button" onclick="openAudioPicker('room-audio-{{ room.id }}')">Browse...</button>
+                <input type="text" name="description" value="{{ room.description or '' }}" placeholder="Author notes" style="flex:2;">
+                <button type="submit">Save</button>
+            </form>
+            {% if room.audio_file_url %}
+                <p style="opacity:0.7; margin-top:4px;">A recorded clip is set for this room -- objects/exits are still spoken by text-to-speech since they can change independently of the recording.</p>
+            {% endif %}
+            <form hx-post="/objloc/room/delete" hx-target="#objloc-screen" hx-swap="outerHTML"
+                  hx-confirm="Delete this room, its exits, and its objects?">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="room_id" value="{{ room.id }}">
+                <button type="submit" class="danger">Delete Room</button>
+            </form>
+
+            <h4>Exits</h4>
+            <table>
+                <thead><tr><th>Direction</th><th>Goes to</th><th></th></tr></thead>
+                <tbody>
+                {% for e in exits %}
+                    <tr>
+                        <td>
+                            <select name="direction">
+                                {% for d in directions %}
+                                    <option value="{{ d }}" {% if d == e.direction %}selected{% endif %}>{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <select name="to_node_id">
+                                {% for r in rooms if r.id != room.id %}
+                                    <option value="{{ r.id }}" {% if r.id == e.to_node_id %}selected{% endif %}>{{ r.node_key }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                            <input type="hidden" name="room_id" value="{{ room.id }}">
+                            <input type="hidden" name="connection_id" value="{{ e.id }}">
+                            <button type="button" hx-post="/objloc/connection/edit" hx-target="#objloc-screen" hx-swap="outerHTML" hx-include="closest tr">Save</button>
+                            <button type="button" class="danger" hx-post="/objloc/connection/delete" hx-target="#objloc-screen" hx-swap="outerHTML" hx-include="closest tr" hx-confirm="Delete this exit?">Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            {% if rooms | length > 1 %}
+            <form hx-post="/objloc/connection/add" hx-target="#objloc-screen" hx-swap="outerHTML" style="display:flex; gap:6px; margin-top:6px;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="room_id" value="{{ room.id }}">
+                <select name="direction">
+                    {% for d in directions %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+                </select>
+                <select name="to_node_id">
+                    {% for r in rooms if r.id != room.id %}
+                        <option value="{{ r.id }}">{{ r.node_key }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Add Exit</button>
+            </form>
+            {% else %}
+            <p style="opacity:0.7;">Add another room to create an exit from here.</p>
+            {% endif %}
+
+            <h4>Objects in this room</h4>
+            <table>
+                <thead><tr><th>Key</th><th>Name</th><th>Description</th><th>Takeable</th><th></th></tr></thead>
+                <tbody>
+                {% for o in room_objects %}
+                <tr>
+                    <td><input type="text" name="object_key" value="{{ o.object_key }}" required></td>
+                    <td><input type="text" name="name" value="{{ o.name }}" required></td>
+                    <td><input type="text" name="description" value="{{ o.description or '' }}"></td>
+                    <td><input type="checkbox" name="takeable" value="true" {% if o.takeable %}checked{% endif %}></td>
+                    <td>
+                        <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                        <input type="hidden" name="room_id" value="{{ room.id }}">
+                        <input type="hidden" name="object_id" value="{{ o.id }}">
+                        <button type="button" hx-post="/objloc/object/edit" hx-target="#objloc-screen" hx-swap="outerHTML" hx-include="closest tr">Save</button>
+                        <button type="button" class="danger" hx-post="/objloc/object/delete" hx-target="#objloc-screen" hx-swap="outerHTML" hx-include="closest tr" hx-confirm="Delete this object?">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <form hx-post="/objloc/object/add" hx-target="#objloc-screen" hx-swap="outerHTML" style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="room_id" value="{{ room.id }}">
+                <input type="text" name="object_key" placeholder="key (e.g. lantern)" required>
+                <input type="text" name="name" placeholder="Spoken name" required>
+                <input type="text" name="description" placeholder="Description">
+                <label><input type="checkbox" name="takeable" value="true" checked> Takeable</label>
+                <button type="submit">Add Object</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

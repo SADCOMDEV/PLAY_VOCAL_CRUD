@@ -1,0 +1,183 @@
+<div id="question-screen">
+    <div class="toolbar">
+        <span style="color:#4af;"><strong>Question App:</strong></span>
+        <select onchange="selectApp(this, '/question/select')">
+            {% for a in apps %}
+                <option value="{{ a.id }}" {% if a.id == selected_app_id %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if selected_app %}
+        <form hx-post="/question/app/edit" hx-target="#question-screen" hx-swap="outerHTML"
+              style="display:flex; gap:6px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+            <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+            <label style="white-space:nowrap;">Prompt asked before every question:</label>
+            <input type="text" name="question_prompt" value="{{ selected_app.question_prompt or '' }}"
+                   placeholder="e.g. 'Name this song?'" style="flex:1; min-width:180px;">
+            <label style="white-space:nowrap;">Extra answer field(s):</label>
+            <input type="text" name="answer_extra_fields" value="{{ selected_app.answer_extra_fields | join(', ') }}"
+                   placeholder="e.g. 'Artist' or 'Year, Director' (blank = none)" style="flex:1; min-width:200px;">
+            <button type="submit">Save</button>
+        </form>
+    {% endif %}
+
+    {% if not apps %}
+        <p>No QUESTION apps yet. Create one from the Admin/CRUD tab (type = QUESTION), then come back here to add its content.</p>
+
+    {% elif selected_question %}
+        <!-- ============ DETAIL VIEW: one question + its answers ============ -->
+        <button type="button" class="back-link"
+                hx-get="/question/select?app_id={{ selected_app_id }}"
+                hx-target="#question-screen" hx-swap="outerHTML">
+            &larr; Back to question list
+        </button>
+
+        <div class="content-block">
+            <label style="display:block; margin-bottom:6px;">Audio clip for this round (the caller hears this, then picks an answer below):</label>
+            <form hx-post="/question/node/edit" hx-target="#question-screen" hx-swap="outerHTML" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="node_id" value="{{ selected_question.id }}">
+                <input type="text" id="q-audio-{{ selected_question.id }}" name="audio_file_url" value="{{ selected_question.audio_file_url or '' }}"
+                       placeholder="Audio URL (optional -- falls back to speaking the correct answer if left blank)" style="flex:2;">
+                <button type="button" onclick="openAudioPicker('q-audio-{{ selected_question.id }}')">Browse...</button>
+                <input type="hidden" id="q-active-hidden-{{ selected_question.id }}" name="active" value="{{ 'true' if selected_question.active else 'false' }}">
+                <label>
+                    <input type="checkbox"
+                           onchange="document.getElementById('q-active-hidden-{{ selected_question.id }}').value = this.checked ? 'true' : 'false'"
+                           {% if selected_question.active %}checked{% endif %}>
+                    Active (live on calls)
+                </label>
+                <button type="submit">Save</button>
+            </form>
+            <form hx-post="/question/node/delete" hx-target="#question-screen" hx-swap="outerHTML"
+                  hx-confirm="Delete this question and all its answers?">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="node_id" value="{{ selected_question.id }}">
+                <button type="submit" class="danger">Delete Question</button>
+            </form>
+
+            <table class="answer-table">
+                <thead>
+                    <tr>
+                        <th>Correct</th>
+                        <th>Answer</th>
+                        {% for field in selected_app.answer_extra_fields %}<th>{{ field }}</th>{% endfor %}
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for ans in selected_question.answers %}
+                    <tr>
+                        <td>
+                            <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                            <input type="hidden" name="question_id" value="{{ selected_question.id }}">
+                            <input type="hidden" name="answer_id" value="{{ ans.id }}">
+                            <input type="radio" name="correct_{{ selected_question.id }}"
+                                   {% if ans.is_correct %}checked{% endif %}
+                                   hx-post="/question/answer/set_correct"
+                                   hx-target="#question-screen"
+                                   hx-swap="outerHTML"
+                                   hx-include="closest tr">
+                        </td>
+                        <td>
+                            <input type="text" name="answer_text" value="{{ ans.answer_text }}" required
+                                   hx-post="/question/answer/edit"
+                                   hx-target="#question-screen"
+                                   hx-swap="outerHTML"
+                                   hx-trigger="change"
+                                   hx-include="closest tr"
+                                   style="width:95%;">
+                        </td>
+                        {% for field in selected_app.answer_extra_fields %}
+                        <td>
+                            <input type="text" name="field:{{ field }}" value="{{ ans.metadata.get(field, '') }}"
+                                   hx-post="/question/answer/edit"
+                                   hx-target="#question-screen"
+                                   hx-swap="outerHTML"
+                                   hx-trigger="change"
+                                   hx-include="closest tr"
+                                   style="width:95%;">
+                        </td>
+                        {% endfor %}
+                        <td>
+                            <button type="button" class="danger"
+                                    hx-post="/question/answer/delete"
+                                    hx-target="#question-screen"
+                                    hx-swap="outerHTML"
+                                    hx-include="closest tr"
+                                    hx-confirm="Delete this answer?">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{{ 3 + (selected_app.answer_extra_fields | length) }}" style="opacity:0.7;">No answers yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <form hx-post="/question/answer/add" hx-target="#question-screen" hx-swap="outerHTML" style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+                <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+                <input type="hidden" name="question_id" value="{{ selected_question.id }}">
+                <input type="text" name="answer_text" placeholder="New answer" required>
+                {% for field in selected_app.answer_extra_fields %}
+                    <input type="text" name="field:{{ field }}" placeholder="{{ field }} (optional)">
+                {% endfor %}
+                <label><input type="checkbox" name="is_correct" value="true"> Correct</label>
+                <button type="submit">Add Answer</button>
+            </form>
+        </div>
+
+    {% else %}
+        <!-- ============ LIST VIEW: every question in this app ============ -->
+        <button type="button" onclick="toggleNewAppForm('add-question-form')">+ Add Question</button>
+        <form id="add-question-form" class="hidden new-app-form"
+              hx-post="/question/node/add" hx-target="#question-screen" hx-swap="outerHTML">
+            <input type="hidden" name="app_id" value="{{ selected_app_id }}">
+            <input type="text" id="new-question-audio-url" name="audio_file_url" placeholder="Audio URL (optional -- can add later)" style="flex:2;">
+            <button type="button" onclick="openAudioPicker('new-question-audio-url')">Browse...</button>
+            <button type="submit">Add Question</button>
+        </form>
+
+        <table>
+            <thead><tr><th>Answer</th><th>Audio</th><th># Answers</th><th>Active</th><th></th></tr></thead>
+            <tbody>
+            {% for q in questions %}
+                {% set correct_answer = (q.answers | selectattr('is_correct') | first) %}
+                <tr style="{{ 'opacity:0.5;' if not q.active }}">
+                    <td>
+                        {% if correct_answer %}
+                            {{ correct_answer.answer_text }}{% for field in selected_app.answer_extra_fields %}{% if correct_answer.metadata.get(field) %}, {{ correct_answer.metadata.get(field) }}{% endif %}{% endfor %}
+                        {% else %}
+                            (no correct answer set yet)
+                        {% endif %}
+                    </td>
+                    <td>{{ 'Yes' if q.audio_file_url else '—' }}</td>
+                    <td>{{ q.answers | length }}</td>
+                    <td>
+                        <input type="checkbox" {% if q.active %}checked{% endif %}
+                               onchange="htmx.ajax('POST', '/question/node/edit', {target: '#question-screen', swap: 'outerHTML', values: {app_id: '{{ selected_app_id }}', node_id: '{{ q.id }}', active: this.checked ? 'true' : 'false'}})">
+                    </td>
+                    <td>
+                        <button type="button"
+                                hx-get="/question/view?app_id={{ selected_app_id }}&question_id={{ q.id }}"
+                                hx-target="#question-screen" hx-swap="outerHTML">
+                            Edit
+                        </button>
+                        <button type="button" class="danger"
+                                hx-post="/question/node/delete"
+                                hx-target="#question-screen" hx-swap="outerHTML"
+                                hx-vals='{"app_id": "{{ selected_app_id }}", "node_id": "{{ q.id }}"}'
+                                hx-confirm="Delete this question and all its answers?">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" style="opacity:0.7;">No questions yet. Click "+ Add Question" to create one.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>

@@ -52,9 +52,17 @@
     <!-- TOP TABS -->
     <div class="top-tab-bar">
 
+        <button class="menu-tab active"
+                data-tab="crud"
+                hx-get="/menu/crud"
+                hx-target="#menu-content"
+                hx-swap="innerHTML">
+            Admin
+        </button>
+
         <button class="menu-tab"
-                data-tab="multiple_choice"
-                hx-get="/menu/multiple_choice"
+                data-tab="question"
+                hx-get="/menu/question"
                 hx-target="#menu-content"
                 hx-swap="innerHTML">
             Multiple Choice
@@ -68,14 +76,14 @@
             Story
         </button>
 
-        <button class="menu-tab active"
-                data-tab="crud"
-                hx-get="/menu/crud"
+        <button class="menu-tab"
+                data-tab="objloc"
+                hx-get="/menu/objloc"
                 hx-target="#menu-content"
                 hx-swap="innerHTML">
-            Admin
+            Worlds
         </button>
-        
+
     </div>
 
     <!-- CONTENT AREA -->
@@ -89,8 +97,22 @@
 
 </div>
 
+<!-- Shared audio-file picker, used by Question/Story/Worlds audio_file_url
+     fields -- one dialog for the whole app rather than one per screen,
+     since only one can ever be open at a time. -->
+<dialog id="audio-picker-dialog">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong>Select an audio file</strong>
+        <button type="button" onclick="closeAudioPicker()">Close</button>
+    </div>
+    <div id="audio-picker-list" hx-get="/audio_picker" hx-trigger="none" hx-swap="innerHTML">
+        Loading...
+    </div>
+</dialog>
+
 <script src="/static/htmx.min.js"></script>
 <script src="/static/crud.js"></script>
+<script src="/static/content_editor.js"></script>
 
 <script>
 document.body.addEventListener("htmx:afterRequest", function (evt) {

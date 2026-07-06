@@ -1,0 +1,18 @@
+{% if not files %}
+    <p style="opacity:0.7;">No audio files uploaded yet.</p>
+{% else %}
+    <table>
+        <thead><tr><th>Title</th><th>Type</th><th></th></tr></thead>
+        <tbody>
+        {% for f in files %}
+            <tr>
+                <td>{{ f.title }}</td>
+                <td>{{ f.type or '—' }}</td>
+                <td>
+                    <button type="button" onclick="selectAudioFile('{{ f.file_url }}')">Select</button>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
